@@ -33,15 +33,11 @@ SEÇÃO 7 - CRIANDO AMBIENTE NO WINDOWS
 * Montando Ambiente | VM (Virtual Machine - Hyper-V)
 * Preparando Servidor
 * Instalando o SGBD
+* Criando o Primeiro Banco de Dados
+* Criando as Variáveis Permanentes
+* Instalando Ferramentas de Codificação
+* O dicionário de Dados e Queries Úteis
+
+SEÇÃO 8 - OBJETO DE BANCO DE DADOS
+
 * 
-* 
-* 
-* 
-
-
-
-
-
-
-
-
