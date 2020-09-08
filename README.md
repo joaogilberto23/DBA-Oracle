@@ -40,4 +40,13 @@ SEÇÃO 7 - CRIANDO AMBIENTE NO WINDOWS
 
 SEÇÃO 8 - OBJETO DE BANCO DE DADOS
 
+* Relacionando Unidades Físicas x Lógicas
+* Formatando Colunas
+* Instalando e Configurando o SQL Developer
+* TableSpaces Customizadas
+* 
+*  
+* 
+* 
+* 
 * 
