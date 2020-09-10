@@ -44,9 +44,9 @@ SEÇÃO 8 - OBJETO DE BANCO DE DADOS
 * Formatando Colunas
 * Instalando e Configurando o SQL Developer
 * TableSpaces Customizadas
-* 
-*  
-* 
+* Introdução as Sequences
+* Backups e Operações com Tablespaces e Datafiles
+* Pseudo Colunas
 * 
 * 
 * 
