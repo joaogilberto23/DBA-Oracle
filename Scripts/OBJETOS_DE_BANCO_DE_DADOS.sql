@@ -1,0 +1,284 @@
+--UTILIZANDO O SQL DEVELOPER-----------------------------------------------------
+
+--CRIAÇÃO DE TABLESPACE-----------------------------------------------------
+CREATE TABLESPACE RECURSOS_HUMANOS
+DATAFILE 'C:/DATA/RH_01.DBF'
+SIZE 10M AUTOEXTEND
+ON NEXT 10M
+MAXSIZE 50M;
+
+--AUMENTO DE TABLESPACE-----------------------------------------------------
+ALTER TABLESPACE RECURSOS_HUMANOS
+ADD DATAFILE 'C:/DATA/RH_02.DBF'
+SIZE 5M AUTOEXTEND
+ON NEXT 5M
+MAXSIZE 50M;
+
+--
+SELECT TABLESPACE_NAME, FILE_NAME FROM DBA_DATA_FILES;
+
+/*
+--SEQUENCES-----------------------------------------------------
+
+Enquanto no SQL Server(IDENTITY) ou no MySQL(AUTO_INCREMENT) a coluna de incremento está restrita a tabela,
+no Oracle, a SEQUENCE faz parte do Banco de Dados inteiro.
+*/
+CREATE SEQUENCE SEQ_GERAL
+START WITH 100
+INCREMENT BY 10;
+
+--CRIANDO UMA TABELA NA TABLESPACE-----------------------------------------------------
+CREATE TABLE FUNCIONARIOS(
+    IDFUNCIONARIO INT PRIMARY KEY,
+    NOME VARCHAR2(30)
+)TABLESPACE RECURSOS_HUMANOS;
+
+/*
+OBS: O tipo VARCHAR2 é o mesmo que o VARCHAR nas demais lingagens de banco; se utilizado no Oracle significa apenas
+um apontamento do VRACHAR para o tipo VARCHAR2, logo, o mais indicado e para evitar erros e perda de performance
+é utilizar a nomenclatura específica do Oracle.
+*/
+
+INSERT INTO FUNCIONARIOS VALUES (SEQ_GERAL.NEXTVAL, 'JOÃO');
+INSERT INTO FUNCIONARIOS VALUES (SEQ_GERAL.NEXTVAL, 'CLARA');
+INSERT INTO FUNCIONARIOS VALUES (SEQ_GERAL.NEXTVAL, 'LILIAN');
+
+SELECT * FROM FUNCIONARIOS;
+
+--EFETUANDO O COMMIT-----------------------------------------------------
+--NO ATALHO F11 OU ÍCONE NA BARRA PARA SALVAR AS ALTERAÇÕES FEITAS
+
+/*
+No Oracle é possível realizar a manutenção/backup em parte de um banco de dados
+sem que os demais usuários percam acesso ao sistema.
+*/
+
+--CRIANDO DE TABLESPACE MARKETING-----------------------------------------------------
+CREATE TABLESPACE MARKETING
+DATAFILE 'C:/DATA/MKT_01.DBF'
+SIZE 10M AUTOEXTEND
+ON NEXT 10M
+MAXSIZE 50M;
+
+CREATE TABLE CAMPANHA(
+    IDCAMPANHA INT PRIMARY KEY,
+    NOME VARCHAR2(30)
+)TABLESPACE MARKETING;
+
+INSERT INTO CAMPANHA VALUES (SEQ_GERAL.NEXTVAL, 'PRIMAVERA');
+INSERT INTO CAMPANHA VALUES (SEQ_GERAL.NEXTVAL, 'VERAO');
+INSERT INTO CAMPANHA VALUES (SEQ_GERAL.NEXTVAL, 'INVERNO');
+
+SELECT * FROM CAMPANHA;
+
+--COLOCANDO A TABLESPACE OFFLINE-----------------------------------------------------
+ALTER TABLESPACE RECURSOS_HUMANOS OFFLINE;
+
+--APONTANDO O DICIONARIO DE DADOS-----------------------------------------------------
+ALTER TABLESPACE RECURSOS_HUMANOS
+RENAME DATAFILE 'C:/DATA/RH_01.DBF' --LOCAL DE ORIGEM
+TO 'C:/PRODUCAO/RH_01.DBF';  --LOCAL DESTINO
+
+ALTER TABLESPACE RECURSOS_HUMANOS
+RENAME DATAFILE 'C:/DATA/RH_02.DBF'
+TO 'C:/PRODUCAO/RH_02.DBF';
+--Desta forma apontamos o novo local FÍSICO do arquivo DBF onde está a Tablespace
+
+--COLOCANDO A TABLESPACE ONLINE-----------------------------------------------------
+ALTER TABLESPACE RECURSOS_HUMANOS ONLINE;
+
+--PSEUDO COLUNAS-----------------------------------------------------
+
+--Criando tabela aluno
+CREATE TABLE ALUNO(
+    IDALUNO INT PRIMARY KEY,
+    NOME VARCHAR2(30),
+    EMAIL VARCHAR2(30),
+    SALARIO NUMBER(10,2)
+);
+
+--Criando sequence exemplo
+CREATE SEQUENCE SEQ_EXEMPLO;
+
+--Ligando a tabela a sequence criada
+INSERT INTO ALUNO VALUES(SEQ_EXEMPLO.NEXTVAL,'JOAO','JOAO@GMAIL.COM',1000.00);
+INSERT INTO ALUNO VALUES(SEQ_EXEMPLO.NEXTVAL,'CLARA','CLARA@GMAIL.COM',2000.00);
+INSERT INTO ALUNO VALUES(SEQ_EXEMPLO.NEXTVAL,'CELIA','CELIA@GMAIL.COM',3000.00);
+
+SELECT * FROM ALUNO;
+
+/*
+Existem duas pseudo colunas, são elas:
+ROWID - Endereço FÍSICO do registro no Banco de Dados, ELE É SEMPRE ÚNICO!
+ROWNUM - É utilizado para paginar registros.
+*/
+
+SELECT ROWID, IDALUNO, NOME, EMAIL, SALARIO FROM ALUNO;
+SELECT ROWID, ROWNUM, IDALUNO, NOME, EMAIL, SALARIO FROM ALUNO;
+SELECT IDALUNO, NOME, EMAIL, SALARIO FROM ALUNO WHERE ROWNUM <=2; --COMANDO PARA PAGINAR
+
+-----------------------------------------------------
+
+--TRIGGERS-----------------------------------------------------
+/*
+Há duas formas de executar uma TRIGGER; a primeira é uma programação dentro da trigger,
+então quando alguma operação for feita na tabela, a triggers é disparada (forma mais limitada);
+A segunda é a triggers chamando uma PROCEDURE que executa uma ação.
+*/
+
+--Criando uma PROCEDURE de aumento de salário
+CREATE OR REPLACE PROCEDURE BONUS(P_IDALUNO ALUNO.IDALUNO%TYPE, P_PERCENT NUMBER)
+--NO CAMPO ALUNO FOI ESPECIFICADA A TABELA (ALUNO) E O CAMPO (IDALUNO) JUNTO AO %TYPE PARA QUE,
+--EM CASO DE MUDANÇA DE TIPO DE DADO, A PROCEDURE NÃO FIQUE INVÁLIDA. 
+AS
+    BEGIN
+        UPDATE ALUNO SET SALARIO = SALARIO + (SALARIO *(P_PERCENT/100))
+        WHERE P_IDALUNO = IDALUNO;
+    END;
+/
+--Chamando a PROCEDURE
+CALL BONUS(3, 10);
+/*
+- As TRIGGERS devem ter no máximo 32K
+- Não executam comandos DTL - COMMIT, ROLLBACK e SAVEPOINTS
+*/
+
+--Criando uma TRIGGER de validação
+CREATE OR REPLACE TRIGGER CHECK_SALARIO
+BEFORE INSERT OR UPDATE ON ALUNO --Antes o INSERT ou DELETE, poderia ser AFTER (depois)
+FOR EACH ROW --Para cada linha que obedecer a condição, executar a TRIGGER
+BEGIN
+    IF :NEW.SALARIO < 2000 THEN
+        RAISE_APPLICATION_ERROR(-20000, 'VALOR INCORRETO!');
+    END IF;
+END;
+/
+
+SHOW ERROS; --VERIFICAR ÚLTIMOS LOGS DE ERRO
+
+--Testando a TRIGGER
+INSERT INTO ALUNO VALUES(SEQ_EXEMPLO.NEXTVAL,'MAFRA','MAFRA@GMAIL.COM',100.00);
+
+--Verificar quais TRIGGERS existem na tabela
+SELECT TRIGGER_NAME, TRIGGER_BODY
+FROM USER_TRIGGERS;
+
+--Criando TRIGGER de eventos
+CREATE TABLE AUDITORIA(
+    DATA_LOGIN DATE,
+    LOGIN VARCHAR2(30)
+);
+
+--PROCEDURE para verificar data e usuário
+CREATE OR REPLACE PROCEDURE LOGPROC IS
+BEGIN
+    INSERT INTO AUDITORIA(DATA_LOGIN,LOGIN)
+    VALUES (SYSDATE,USER);
+END LOGPROC;
+/
+
+SELECT SYSDATE FROM DUAL; --VERIFICAR DATA
+SELECT USER FROM DUAL; --VERIFICAR USUÁRIO
+
+--Trigger que vai chamar a PROCEDURE após o login para verificar Data e Usuário 
+CREATE OR REPLACE TRIGGER LOGTRIGGER
+AFTER LOGON ON DATABASE
+CALL LOGPROC
+/
+
+--TRIGGER para verificar FALHA DE LOGON
+CREATE OR REPLACE TRIGGER FALHA_LOGON
+AFTER SERVERERROR ON DATABASE
+BEGIN
+    IF(IS_SERVERERROR(1017)) THEN
+    INSERT INTO AUDITORIA(DATA_LOGIN,LOGIN)
+    VALUES(SYSDATE,'ORA-1017');
+    END IF;
+END FALHA_LOGON;
+/
+
+--TRIGGER de DML
+
+CREATE TABLE USUARIO(
+    ID INT,
+    NOME VARCHAR2(30)
+);
+
+CREATE TABLE BKP_USER(
+    ID INT,
+    NOME VARCHAR2(30)
+); 
+
+INSERT INTO USUARIO VALUES (1, 'JOAO');
+INSERT INTO USUARIO VALUES (2, 'CLARA');
+COMMIT;
+
+SELECT * FROM USUARIO;
+
+--TRIGGER que fará backup em caso de exclusão de dado
+CREATE OR REPLACE TRIGGER LOG_USUARIO
+BEFORE DELETE ON USUARIO
+FOR EACH ROW
+BEGIN
+    INSERT INTO BKP_USER VALUES
+    (:OLD.ID, :OLD.NOME); --.OLD POR SER O VALOR QUE ESTAVA NA TABELA, DE FOSSE UM INSERT SERIA .NEW
+END;
+/
+
+DELETE FROM USUARIO WHERE ID=1;
+SELECT * FROM USUARIO;
+SELECT * FROM BKP_USER;
+
+--OPERAÇÕES COM VIEWS-----------------------------------------------------
+
+CREATE TABLE CLIENTE(
+    IDCLIENTE INT PRIMARY KEY,
+    NOME VARCHAR2(30),
+    SEXO CHAR(1)
+);
+
+INSERT INTO CLIENTE VALUES (1007,'MAFRA','M');
+COMMIT;
+
+SELECT * FROM CLIENTE;
+
+--Criando VIEW
+CREATE OR REPLACE VIEW V_CLIENTE
+AS
+    SELECT IDCLIENTE, NOME, SEXO
+    FROM CLIENTE;
+
+SELECT * FROM V_CLIENTE;
+--É Possível inserir dados em uma View simples; em views com joins é necessário
+--uma programação mais detalhada.
+
+--View apenas de leitura
+CREATE OR REPLACE VIEW V_CLIENTE
+AS
+    SELECT IDCLIENTE, NOME, SEXO
+    FROM CLIENTE
+    WITH READ ONLY; --Neste tipo de view não é possível inserir dados.
+
+--View de JOIN
+CREATE OR REPLACE FORCE VIEW RELATORIO
+/*A instrução FORCE literalmente força a criação da view ainda que 
+alguma tabela precise ser criada.
+*/
+AS
+    SELECT NOME, SEXO, NUMERO
+    FROM CLIENTE
+    INNER JOIN TELEFONE
+    ON IDCLIENTE = ID_CLIENTE;
+
+CREATE TABLE TELEFONE(
+    IDTELEFONE INT PRIMARY KEY,
+    NUMERO VARCHAR2(10),
+    ID_CLIENTE INT
+);
+ALTER TABLE TELEFONE ADD CONSTRAINT FK_CLIENTE_TELEFONE
+FOREIGN KEY(ID_CLIENTE) REFERENCES CLIENTE;
+
+INSERT INTO TELEFONE VALUES (1,'34543355',1007);
+COMMIT;
+
+SELECT * FROM RELATORIO;

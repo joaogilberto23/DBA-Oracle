@@ -47,6 +47,9 @@ SEÇÃO 8 - OBJETO DE BANCO DE DADOS
 * Introdução as Sequences
 * Backups e Operações com Tablespaces e Datafiles
 * Pseudo Colunas
-* 
-* 
-* 
+* Introdução à Triggers
+* Operações com Views
+
+SEÇÃO 9 - OPERAÇÕES DE INSERÇÃO EM MASSA
+
+* Deferrable Constraints
